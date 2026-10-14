@@ -1,6 +1,6 @@
 import { CaptionController } from './controller';
 import { selectCaptionCandidate, selectTranscriptCaptions, type CaptionCandidate } from './caption-resolver';
-import { removeTranslation, renderTranslation } from './renderer';
+import { reconcileTranslation, removeTranslation, renderTranslation } from './renderer';
 import type { Diagnostics, TranslationResponse } from '../shared/types';
 
 const SELECTORS = [
@@ -46,6 +46,7 @@ const controller = new CaptionController<Element>(
   (text, generation) => chrome.runtime.sendMessage({ type: 'translateCaption', text, target: 'vi', generation, priority: 'active' }) as Promise<TranslationResponse>,
   (translation, target) => renderTranslation(target, translation),
   removeTranslation,
+  reconcileTranslation,
 );
 
 let frame: number | undefined;

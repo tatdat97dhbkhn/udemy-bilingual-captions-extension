@@ -1,3 +1,20 @@
-export function overlayPosition(bounds: Pick<DOMRect, 'left' | 'bottom' | 'width'>): Record<'left' | 'top' | 'width', string> {
-  return { left: `${bounds.left}px`, top: `${bounds.bottom - 36}px`, width: `${bounds.width}px` };
-}
+export const translationLineStyle = [
+  'background:#1c1d1f',
+  'box-sizing:border-box',
+  'color:#fff',
+  'display:block',
+  'font-size:1em',
+  'font-weight:500',
+  'line-height:1.35',
+  'margin:6px auto 0',
+  'max-width:100%',
+  'overflow-wrap:anywhere',
+  'padding:2px 6px',
+  'pointer-events:none',
+  'position:relative',
+  'text-align:center',
+  'text-shadow:0 1px 3px #000',
+  'white-space:normal',
+  'width:fit-content',
+  'z-index:1',
+].join(';');
