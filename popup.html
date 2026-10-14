@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="vi">
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Udemy captions</title><style>body{font:14px system-ui;margin:16px;width:300px}label{display:block;margin:10px 0 4px}input{box-sizing:border-box;width:100%;padding:7px}button{margin:12px 8px 0 0;padding:7px 10px}#diagnostic{color:#555;font-size:12px;margin-top:12px}</style></head>
+  <body>
+    <label><input id="enabled" type="checkbox" /> Bật dịch phụ đề</label>
+    <label for="api-key">OpenAI API key</label><input id="api-key" type="password" autocomplete="off" />
+    <label for="model">Model</label><input id="model" value="gpt-4o-mini" />
+    <button id="save">Lưu</button><button id="clear-cache">Xóa cache</button>
+    <div id="diagnostic"></div><script type="module" src="/src/popup/main.ts"></script>
+  </body>
+</html>
