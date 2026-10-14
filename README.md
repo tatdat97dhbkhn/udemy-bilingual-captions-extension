@@ -4,7 +4,7 @@ Chrome Extension cá nhân (Manifest V3) hiển thị bản dịch tiếng Việ
 
 ## Tính năng
 
-- Dịch caption tiếng Anh đang phát sang tiếng Việt bằng OpenAI API.
+- Dịch caption tiếng Anh đang phát sang tiếng Việt bằng OpenAI API hoặc LibreTranslate tự host.
 - Giữ nguyên caption tiếng Anh và hiển thị một dòng tiếng Việt ở overlay bên dưới.
 - Lưu cache tối đa 5.000 bản dịch trong `chrome.storage.local`.
 - Khi transcript Udemy đang mở, dịch trước các cue transcript mà Udemy đã render trong DOM.
@@ -16,7 +16,7 @@ Chrome Extension cá nhân (Manifest V3) hiển thị bản dịch tiếng Việ
 
 - Google Chrome.
 - Node.js và npm.
-- Một OpenAI API key có quyền gọi Chat Completions API.
+- Một OpenAI API key có quyền gọi Chat Completions API, hoặc một máy chủ LibreTranslate bạn tin cậy.
 - Bài học Udemy có phụ đề tiếng Anh. Mở transcript để extension có thể dịch trước các cue mà Udemy hiển thị.
 
 ## Cài đặt cục bộ
@@ -32,9 +32,15 @@ Sau khi build:
 2. Bật **Developer mode**.
 3. Chọn **Load unpacked**.
 4. Chọn thư mục `dist/` của dự án.
-5. Mở một bài học Udemy, nhấn icon extension, nhập API key và chọn **Save**.
+5. Mở một bài học Udemy, nhấn icon extension, chọn nhà cung cấp và lưu cấu hình.
 
 Model mặc định là `gpt-4o-mini`; có thể thay đổi trực tiếp trong popup. Tham khảo [OpenAI Models](https://platform.openai.com/docs/models) và [Chat Completions API](https://platform.openai.com/docs/api-reference/chat).
+
+### LibreTranslate
+
+Chọn **LibreTranslate** trong popup, nhập base URL của máy chủ (ví dụ `http://localhost:5000`) và chọn **Lưu**. Extension sẽ yêu cầu quyền truy cập đúng origin của URL đó; nếu từ chối, cấu hình vẫn được giữ nhưng không có yêu cầu dịch nào được gửi.
+
+LibreTranslate là phần mềm mã nguồn mở có thể tự host, kể cả offline. API key là tùy chọn và chỉ cần nếu instance của bạn yêu cầu. Hãy tự host hoặc chọn một instance bạn tin cậy; dự án không cấu hình sẵn endpoint công cộng miễn phí vì quota, độ sẵn sàng và chính sách CORS không ổn định. Xem [tài liệu LibreTranslate](https://github.com/LibreTranslate/Documentation/blob/main/src/content/docs/guides/api_usage.md).
 
 ## Cách dùng để giảm độ trễ
 
@@ -63,7 +69,7 @@ Nếu thấy “Không tìm thấy phụ đề đang hiển thị”, hãy bảo
 
 - API key, cấu hình, diagnostics và cache được lưu trong `chrome.storage.local`.
 - API key và nội dung caption không được ghi log bởi extension.
-- Caption được gửi tới OpenAI chỉ khi cần dịch hoặc prefetch.
+- Caption được gửi tới OpenAI hoặc endpoint LibreTranslate do bạn chọn chỉ khi cần dịch hoặc prefetch.
 - Extension chỉ đọc caption/transcript mà trang Udemy đã render trong trình duyệt; không sử dụng endpoint nội bộ của Udemy.
 - Nút **Clear cache** chỉ xóa cache bản dịch cục bộ.
 

@@ -3,8 +3,9 @@
   "name": "Udemy Bilingual Captions",
   "version": "0.1.0",
   "description": "Displays Vietnamese translations below Udemy's original English captions.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "permissions"],
   "host_permissions": ["https://www.udemy.com/*", "https://api.openai.com/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [{ "matches": ["https://www.udemy.com/*"], "js": ["content.js"], "run_at": "document_idle" }],
   "action": { "default_popup": "popup.html", "default_title": "Udemy Bilingual Captions" }

@@ -1,17 +1,21 @@
 import { TranslationService } from './translation-service';
-import { DEFAULT_MODEL, type Diagnostics, type ExtensionMessage, type Settings } from '../shared/types';
+import { libreTranslateOriginPattern } from './libretranslate';
+import { normalizeSettings } from '../shared/settings';
+import type { Diagnostics, ExtensionMessage, Settings } from '../shared/types';
 import type { TranslationCache } from '../core/cache';
 
-const DEFAULT_SETTINGS: Settings = { enabled: true, apiKey: '', model: DEFAULT_MODEL };
 const storageGet = <T>(key: string): Promise<T | undefined> => chrome.storage.local.get(key).then((value) => value[key] as T | undefined);
 const storageSet = (value: Record<string, unknown>): Promise<void> => chrome.storage.local.set(value);
 const service = new TranslationService(
   async () => (await storageGet<TranslationCache>('translationCache')) ?? {},
   async (translationCache) => storageSet({ translationCache }),
+  undefined,
+  undefined,
+  async (endpoint) => chrome.permissions.contains({ origins: [libreTranslateOriginPattern(endpoint)] }),
 );
 
 async function getSettings(): Promise<Settings> {
-  return { ...DEFAULT_SETTINGS, ...await storageGet<Partial<Settings>>('settings') };
+  return normalizeSettings(await storageGet<Partial<Settings>>('settings'));
 }
 
 async function setDiagnostics(status: Diagnostics['status'], detail?: string, metrics: Partial<Diagnostics> = {}): Promise<void> {
