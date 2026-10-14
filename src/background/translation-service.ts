@@ -1,7 +1,8 @@
 import { cacheKey, normalizeCaption } from '../core/caption';
 import { getCached, putCached, type TranslationCache } from '../core/cache';
 import { ProviderError, requestOpenAI, requestOpenAIBatch } from './openai';
-import type { Settings, TranslationResponse } from '../shared/types';
+import { libreTranslateEndpoint, requestLibreTranslate, requestLibreTranslateBatch } from './libretranslate';
+import type { Settings, TranslationError, TranslationResponse } from '../shared/types';
 
 const PREFETCH_BATCH_SIZE = 20;
 
@@ -17,13 +18,17 @@ export class TranslationService {
     private readonly saveCache: (cache: TranslationCache) => Promise<void>,
     private readonly translate = requestOpenAI,
     private readonly translateBatch = requestOpenAIBatch,
+    private readonly hasLibreTranslatePermission: (endpoint: string) => Promise<boolean> = async () => true,
+    private readonly translateLibre = requestLibreTranslate,
+    private readonly translateLibreBatch = requestLibreTranslateBatch,
   ) {}
 
   async translateCaption(text: string, settings: Settings): Promise<TranslationResponse> {
     const normalized = normalizeCaption(text);
-    if (!settings.apiKey) return { status: 'error', error: 'missing_api_key' };
+    const configurationError = await this.configurationError(settings);
+    if (configurationError) return { status: 'error', error: configurationError };
     if (!normalized) return { status: 'error', error: 'invalid_response' };
-    const key = cacheKey(normalized);
+    const key = this.cacheKey(normalized, settings);
     const cache = await this.loadCache();
     const cached = getCached(cache, key);
     if (cached) { await this.saveCache(cache); return { status: 'translated', translation: cached, cached: true, prefetchHit: cache[key]?.prefetched }; }
@@ -35,19 +40,19 @@ export class TranslationService {
   }
 
   async prefetchCaptions(texts: string[], settings: Settings): Promise<void> {
-    if (!settings.apiKey) return;
+    if (await this.configurationError(settings)) return;
     const normalized = [...new Set(texts.map(normalizeCaption).filter(Boolean))];
     if (!normalized.length) return;
     const cache = await this.loadCache();
     const missing = normalized.filter((text) => {
-      const key = cacheKey(text);
+      const key = this.cacheKey(text, settings);
       return !cache[key] && !this.prefetchPending.has(key);
     });
     if (!missing.length) return;
     const batches: string[][] = [];
     for (let index = 0; index < missing.length; index += PREFETCH_BATCH_SIZE) {
       const batch = missing.slice(index, index + PREFETCH_BATCH_SIZE);
-      batch.forEach((text) => this.prefetchPending.add(cacheKey(text)));
+      batch.forEach((text) => this.prefetchPending.add(this.cacheKey(text, settings)));
       batches.push(batch);
     }
     await Promise.all(batches.map((batch) => this.enqueue('prefetch', () => this.fetchBatchAndStore(batch, settings, cache))));
@@ -55,7 +60,9 @@ export class TranslationService {
 
   private async fetchAndStore(key: string, text: string, settings: Settings, cache: TranslationCache): Promise<TranslationResponse> {
     try {
-      const translation = await this.translate(settings.apiKey, settings.model, text);
+      const translation = settings.provider === 'libretranslate'
+        ? await this.translateLibre(settings.libreTranslateEndpoint, settings.apiKey, text)
+        : await this.translate(settings.apiKey, settings.model, text);
       putCached(cache, key, translation);
       await this.saveCache(cache);
       return { status: 'translated', translation, cached: false };
@@ -64,14 +71,16 @@ export class TranslationService {
 
   private async fetchBatchAndStore(texts: string[], settings: Settings, cache: TranslationCache): Promise<void> {
     try {
-      const translations = await this.translateBatch(settings.apiKey, settings.model, texts);
+      const translations = settings.provider === 'libretranslate'
+        ? await this.translateLibreBatch(settings.libreTranslateEndpoint, settings.apiKey, texts)
+        : await this.translateBatch(settings.apiKey, settings.model, texts);
       for (const text of texts) {
         const translation = translations.get(text);
-        if (translation) putCached(cache, cacheKey(text), translation, Date.now(), undefined, true);
+        if (translation) putCached(cache, this.cacheKey(text, settings), translation, Date.now(), undefined, true);
       }
       await this.saveCache(cache);
     } catch {} finally {
-      texts.forEach((text) => this.prefetchPending.delete(cacheKey(text)));
+      texts.forEach((text) => this.prefetchPending.delete(this.cacheKey(text, settings)));
     }
   }
 
@@ -95,5 +104,18 @@ export class TranslationService {
       if (kind === 'active') this.activeRunning = false; else this.prefetchRunning = false;
       void this.drain(kind);
     }
+  }
+
+  private async configurationError(settings: Settings): Promise<TranslationError | undefined> {
+    if (settings.provider === 'openai') return settings.apiKey ? undefined : 'missing_api_key';
+    try { libreTranslateEndpoint(settings.libreTranslateEndpoint); } catch (error) {
+      return error instanceof ProviderError && (error.kind === 'missing_endpoint' || error.kind === 'invalid_endpoint') ? error.kind : 'invalid_endpoint';
+    }
+    return await this.hasLibreTranslatePermission(settings.libreTranslateEndpoint) ? undefined : 'missing_endpoint_permission';
+  }
+
+  private cacheKey(text: string, settings: Settings): string {
+    const namespace = settings.provider === 'libretranslate' ? `libretranslate:${libreTranslateEndpoint(settings.libreTranslateEndpoint)}` : 'openai';
+    return cacheKey(`${namespace}:${text}`);
   }
 }

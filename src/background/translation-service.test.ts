@@ -1,8 +1,9 @@
 import { ProviderError, parseVietnameseTranslation, requestOpenAI } from './openai';
+import { libreTranslateOriginPattern, parseLibreTranslateTranslation, requestLibreTranslate, requestLibreTranslateBatch } from './libretranslate';
 import { TranslationService } from './translation-service';
 import type { TranslationCache } from '../core/cache';
 
-const settings = { enabled: true, apiKey: 'test-key', model: 'gpt-4o-mini' };
+const settings = { enabled: true, provider: 'openai' as const, apiKey: 'test-key', model: 'gpt-4o-mini', libreTranslateEndpoint: '' };
 
 describe('OpenAI result validation', () => {
   it('accepts Vietnamese chat-completion content', () => {
@@ -26,6 +27,32 @@ describe('OpenAI result validation', () => {
   });
 });
 
+describe('LibreTranslate adapter', () => {
+  it('translates one caption without including an empty API key', async () => {
+    let body = '';
+    const fetcher = async (_url: string, init?: RequestInit) => {
+      body = String(init?.body);
+      return new Response(JSON.stringify({ translatedText: 'Xin chào' }), { status: 200 });
+    };
+
+    await expect(requestLibreTranslate('http://localhost:5000', '', 'Hello', fetcher as typeof fetch)).resolves.toBe('Xin chào');
+    expect(JSON.parse(body)).toEqual({ q: 'Hello', source: 'en', target: 'vi', format: 'text' });
+  });
+
+  it('translates a batch and rejects a response with the wrong result count', async () => {
+    const fetcher = async () => new Response(JSON.stringify({ translatedText: ['Một'] }), { status: 200 });
+
+    await expect(requestLibreTranslateBatch('http://localhost:5000/', 'key', ['One', 'Two'], fetcher as typeof fetch))
+      .rejects.toMatchObject({ kind: 'invalid_response' });
+  });
+
+  it('normalizes endpoint origins and validates translated text', () => {
+    expect(libreTranslateOriginPattern('http://localhost:5000/')).toBe('http://localhost:5000/*');
+    expect(() => libreTranslateOriginPattern('ftp://localhost:5000')).toThrow(ProviderError);
+    expect(parseLibreTranslateTranslation({ translatedText: 'Xin chào' })).toBe('Xin chào');
+  });
+});
+
 describe('TranslationService', () => {
   it('coalesces matching in-flight translation requests', async () => {
     let calls = 0;
@@ -46,6 +73,36 @@ describe('TranslationService', () => {
   it('returns a clear missing-key error without calling the provider', async () => {
     const service = new TranslationService(async () => ({}), async () => {}, async () => { throw new Error('must not run'); });
     await expect(service.translateCaption('Hello', { ...settings, apiKey: '' })).resolves.toEqual({ status: 'error', error: 'missing_api_key' });
+  });
+
+  it('returns a configuration error for a LibreTranslate endpoint without permission before calling the provider', async () => {
+    const service = new TranslationService(
+      async () => ({}),
+      async () => {},
+      async () => { throw new Error('must not run'); },
+      async () => { throw new Error('must not run'); },
+      async () => false,
+    );
+    await expect(service.translateCaption('Hello', { ...settings, provider: 'libretranslate', apiKey: '', libreTranslateEndpoint: 'http://localhost:5000' }))
+      .resolves.toEqual({ status: 'error', error: 'missing_endpoint_permission' });
+  });
+
+  it('partitions cache by translation provider and endpoint', async () => {
+    const cache: TranslationCache = {};
+    const calls: string[] = [];
+    const service = new TranslationService(
+      async () => cache,
+      async () => {},
+      async () => { calls.push('openai'); return 'OpenAI'; },
+      async () => new Map(),
+      async () => true,
+      async (_endpoint, _apiKey, text) => { calls.push('libre'); return `Libre:${text}` },
+    );
+
+    await service.translateCaption('Hello', settings);
+    await expect(service.translateCaption('Hello', { ...settings, provider: 'libretranslate', apiKey: '', libreTranslateEndpoint: 'http://localhost:5000' }))
+      .resolves.toMatchObject({ translation: 'Libre:Hello', cached: false });
+    expect(calls).toEqual(['openai', 'libre']);
   });
 
   it('stores every successful prefetched caption for a later active cache hit', async () => {
