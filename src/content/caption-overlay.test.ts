@@ -1,7 +1,11 @@
-import { overlayPosition } from './caption-overlay';
+import { translationLineStyle } from './caption-overlay';
 
-describe('overlayPosition', () => {
-  it('places the Vietnamese line directly below the visible English caption', () => {
-    expect(overlayPosition({ left: 100, bottom: 240, width: 480 })).toEqual({ left: '100px', top: '204px', width: '480px' });
+describe('translationLineStyle', () => {
+  it('uses responsive in-flow styles instead of fixed viewport positioning', () => {
+    expect(translationLineStyle).toContain('display:block');
+    expect(translationLineStyle).toContain('max-width:100%');
+    expect(translationLineStyle).toContain('overflow-wrap:anywhere');
+    expect(translationLineStyle).toContain('position:relative');
+    expect(translationLineStyle).not.toContain('position:fixed');
   });
 });

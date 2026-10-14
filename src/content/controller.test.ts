@@ -29,4 +29,41 @@ describe('CaptionController', () => {
 
     expect(rendered).toEqual(['Đã được dịch trước']);
   });
+
+  it('re-renders a cached translation when Udemy replaces the caption element with the same text', async () => {
+    const firstTarget = {};
+    const replacementTarget = {};
+    const rendered: Array<{ translation: string; target: object }> = [];
+    let requests = 0;
+    const controller = new CaptionController<object>(
+      async () => { requests += 1; return { status: 'translated', translation: 'Bản dịch', cached: false }; },
+      (translation, target) => rendered.push({ translation, target }),
+      () => {},
+    );
+
+    await controller.handle('Same caption', firstTarget);
+    await controller.handle('Same caption', replacementTarget);
+
+    expect(requests).toBe(1);
+    expect(rendered).toEqual([
+      { translation: 'Bản dịch', target: firstTarget },
+      { translation: 'Bản dịch', target: replacementTarget },
+    ]);
+  });
+
+  it('reconciles the existing translation when Udemy moves the same caption element', async () => {
+    const target = {};
+    let reconciliations = 0;
+    const controller = new CaptionController<object>(
+      async () => ({ status: 'translated', translation: 'Bản dịch', cached: false }),
+      () => {},
+      () => {},
+      () => { reconciliations += 1; },
+    );
+
+    await controller.handle('Same caption', target);
+    await controller.handle('Same caption', target);
+
+    expect(reconciliations).toBe(1);
+  });
 });
