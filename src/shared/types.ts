@@ -2,12 +2,15 @@ export const DEFAULT_MODEL = 'gpt-4o-mini';
 export const CACHE_LIMIT = 5_000;
 
 export type TranslationProvider = 'openai' | 'libretranslate';
+export type PopupLocale = 'en' | 'vi';
+export type PopupLocalePreference = 'auto' | PopupLocale;
 export interface Settings {
   enabled: boolean;
   provider: TranslationProvider;
   apiKey: string;
   model: string;
   libreTranslateEndpoint: string;
+  popupLocale: PopupLocalePreference;
 }
 export interface CacheEntry { translation: string; createdAt: number; lastAccessedAt: number; prefetched?: boolean }
 export type TranslationError =

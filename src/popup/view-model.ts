@@ -1,4 +1,5 @@
-import type { Diagnostics, TranslationProvider } from '../shared/types';
+import type { Diagnostics, PopupLocale, TranslationError, TranslationProvider } from '../shared/types';
+import { getPopupCopy } from './copy';
 
 export interface ProviderView {
   showModel: boolean;
@@ -15,43 +16,48 @@ export interface DiagnosticsView {
   transcriptDetail?: string;
 }
 
-export function buildProviderView(provider: TranslationProvider): ProviderView {
+export function buildProviderView(locale: PopupLocale, provider: TranslationProvider): ProviderView {
   const isOpenAI = provider === 'openai';
+  const copy = getPopupCopy(locale);
   return {
     showModel: isOpenAI,
     showLibreTranslateEndpoint: !isOpenAI,
-    apiKeyLabel: isOpenAI ? 'OpenAI API key' : 'LibreTranslate API key (tùy chọn)',
+    apiKeyLabel: isOpenAI ? copy.provider.openaiApiKey : copy.provider.libreTranslateApiKey,
   };
 }
 
-export function buildDiagnosticsView(enabled: boolean, diagnostics: Diagnostics | undefined, cacheCount: number): DiagnosticsView {
-  const base = { metrics: cacheCount > 0 ? [{ label: 'Bản dịch đã lưu', value: String(cacheCount) }] : [], cacheCount };
+export function buildDiagnosticsView(locale: PopupLocale, enabled: boolean, diagnostics: Diagnostics | undefined, cacheCount: number): DiagnosticsView {
+  const copy = getPopupCopy(locale).diagnostics;
+  const base: Pick<DiagnosticsView, 'metrics' | 'cacheCount'> = {
+    metrics: cacheCount > 0 ? [{ label: copy.savedTranslations, value: String(cacheCount) }] : [],
+    cacheCount,
+  };
   if (!enabled) {
-    return { tone: 'muted', title: 'Đã tắt', detail: 'Bật dịch phụ đề và lưu cài đặt để tiếp tục.', ...base };
+    return { tone: 'muted', title: copy.disabled[0], detail: copy.disabled[1], ...base };
   }
 
   switch (diagnostics?.status) {
     case 'ready': {
       const metrics = [...base.metrics];
-      if (diagnostics.cacheHits !== undefined) metrics.push({ label: 'Cache sử dụng', value: String(diagnostics.cacheHits) });
-      if (diagnostics.prefetchHits !== undefined) metrics.push({ label: 'Dịch trước', value: String(diagnostics.prefetchHits) });
-      if (diagnostics.activeTranslationMs !== undefined) metrics.push({ label: 'Độ trễ gần nhất', value: `${diagnostics.activeTranslationMs} ms` });
+      if (diagnostics.cacheHits !== undefined) metrics.push({ label: copy.cacheHits, value: String(diagnostics.cacheHits) });
+      if (diagnostics.prefetchHits !== undefined) metrics.push({ label: copy.prefetchHits, value: String(diagnostics.prefetchHits) });
+      if (diagnostics.activeTranslationMs !== undefined) metrics.push({ label: copy.latestLatency, value: `${diagnostics.activeTranslationMs} ms` });
       return {
         tone: 'success',
-        title: 'Sẵn sàng',
-        detail: 'Dịch phụ đề đang hoạt động.',
+        title: copy.ready[0],
+        detail: copy.ready[1],
         ...base,
         metrics,
-        transcriptDetail: diagnostics.transcriptAvailable === false ? 'Không có transcript để dịch trước.' : undefined,
+        transcriptDetail: diagnostics.transcriptAvailable === false ? copy.noTranscript : undefined,
       };
     }
     case 'translating':
-      return { tone: 'info', title: 'Đang dịch', detail: 'Đang chuẩn bị bản dịch cho phụ đề hiện tại.', ...base };
+      return { tone: 'info', title: copy.translating[0], detail: copy.translating[1], ...base };
     case 'subtitle_not_found':
-      return { tone: 'muted', title: 'Không tìm thấy phụ đề', detail: 'Mở một bài học Udemy có phụ đề tiếng Anh để bắt đầu.', ...base };
+      return { tone: 'muted', title: copy.subtitleNotFound[0], detail: copy.subtitleNotFound[1], ...base };
     case 'error':
-      return { tone: 'danger', title: 'Có lỗi khi dịch', detail: diagnostics.detail || 'Kiểm tra lại cài đặt và thử lại.', ...base };
+      return { tone: 'danger', title: copy.error[0], detail: diagnostics.detail ? copy.errorDetails[diagnostics.detail as TranslationError] ?? diagnostics.detail : copy.error[1], ...base };
     default:
-      return { tone: 'muted', title: 'Đang chờ', detail: 'Mở một bài học Udemy để xem trạng thái dịch.', ...base };
+      return { tone: 'muted', title: copy.waiting[0], detail: copy.waiting[1], ...base };
   }
 }

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,37 +10,38 @@
       <header class="app-header">
         <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15.5A2.5 2.5 0 0 0 17.5 16H4V5.5Zm2.5-.5a.5.5 0 0 0-.5.5V14h11.5a4.5 4.5 0 0 1 .5.03V5H6.5ZM8 8h7v2H8V8Zm0 3.5h5v2H8v-2Z" /></svg></span>
         <h1>Bilingual Subtitles</h1>
-        <button id="settings-toggle" class="icon-button" type="button" aria-label="Mở cài đặt nâng cao" aria-controls="advanced-settings" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58-1.92-3.32-2.39.96a7.2 7.2 0 0 0-1.63-.95L14.86 3h-3.84l-.36 3.17c-.58.24-1.12.55-1.62.95l-2.4-.96-1.92 3.32 2.04 1.58a7.6 7.6 0 0 0 0 1.88l-2.04 1.58 1.92 3.32 2.4-.96c.5.4 1.04.72 1.62.96l.36 3.16h3.84l.36-3.16c.58-.24 1.12-.56 1.63-.96l2.39.96 1.92-3.32-2.02-1.58ZM12.94 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" /></svg></button>
+        <button id="settings-toggle" class="icon-button" type="button" aria-label="Open advanced settings" aria-controls="advanced-settings" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58-1.92-3.32-2.39.96a7.2 7.2 0 0 0-1.63-.95L14.86 3h-3.84l-.36 3.17c-.58.24-1.12.55-1.62.95l-2.4-.96-1.92 3.32 2.04 1.58a7.6 7.6 0 0 0 0 1.88l-2.04 1.58 1.92 3.32 2.4-.96c.5.4 1.04.72 1.62.96l.36 3.16h3.84l.36-3.16c.58-.24 1.12-.56 1.63-.96l2.39.96 1.92-3.32-2.02-1.58ZM12.94 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" /></svg></button>
       </header>
 
       <form id="settings-form" novalidate>
         <section class="toggle-section" aria-labelledby="translation-title">
-          <div class="toggle-row"><h2 id="translation-title">Dịch phụ đề</h2><label class="switch"><input id="enabled" type="checkbox" role="switch" /><span aria-hidden="true"></span><span class="sr-only">Bật hoặc tắt dịch phụ đề</span></label></div>
-          <p id="enabled-description" class="helper-text">Hiển thị tiếng Việt dưới phụ đề tiếng Anh.</p>
+          <div class="toggle-row"><h2 id="translation-title" data-i18n="translationTitle">Subtitle translation</h2><label class="switch"><input id="enabled" type="checkbox" role="switch" /><span aria-hidden="true"></span><span class="sr-only" data-i18n="enabledLabel">Enable or disable subtitle translation</span></label></div>
+          <p id="enabled-description" class="helper-text" data-i18n="enabledDescription">Show Vietnamese below English subtitles.</p>
         </section>
 
         <section class="provider-section" aria-labelledby="provider-title">
-          <h2 id="provider-title">Dịch vụ dịch thuật</h2>
-          <label class="sr-only" for="provider">Dịch vụ dịch thuật</label>
+          <h2 id="provider-title" data-i18n="providerTitle">Translation provider</h2>
+          <label class="sr-only" for="provider" data-i18n="providerTitle">Translation provider</label>
           <select id="provider"><option value="openai">OpenAI</option><option value="libretranslate">LibreTranslate</option></select>
         </section>
 
-        <button id="advanced-toggle" class="advanced-toggle" type="button" aria-controls="advanced-settings" aria-expanded="false"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58-1.92-3.32-2.39.96a7.2 7.2 0 0 0-1.63-.95L14.86 3h-3.84l-.36 3.17c-.58.24-1.12.55-1.62.95l-2.4-.96-1.92 3.32 2.04 1.58a7.6 7.6 0 0 0 0 1.88l-2.04 1.58 1.92 3.32 2.4-.96c.5.4 1.04.72 1.62.96l.36 3.16h3.84l.36-3.16c.58-.24 1.12-.56 1.63-.96l2.39.96 1.92-3.32-2.02-1.58ZM12.94 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" /></svg>Cài đặt nâng cao</span><span class="chevron" aria-hidden="true">⌄</span></button>
-        <section id="advanced-settings" class="advanced-settings" hidden aria-label="Cài đặt nâng cao">
-          <div class="field-group"><label id="api-key-label" for="api-key">OpenAI API key</label><div class="password-field"><input id="api-key" type="password" autocomplete="off" /><button id="api-key-visibility" class="icon-button input-icon" type="button" aria-label="Hiện API key"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.2 0 8.74 4.55 9.75 6.1a1.65 1.65 0 0 1 0 1.8C20.74 14.45 17.2 19 12 19S3.26 14.45 2.25 12.9a1.65 1.65 0 0 1 0-1.8C3.26 9.55 6.8 5 12 5Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 2.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z" /></svg></button></div></div>
+        <button id="advanced-toggle" class="advanced-toggle" type="button" aria-controls="advanced-settings" aria-expanded="false"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58-1.92-3.32-2.39.96a7.2 7.2 0 0 0-1.63-.95L14.86 3h-3.84l-.36 3.17c-.58.24-1.12.55-1.62.95l-2.4-.96-1.92 3.32 2.04 1.58a7.6 7.6 0 0 0 0 1.88l-2.04 1.58 1.92 3.32 2.4-.96c.5.4 1.04.72 1.62.96l.36 3.16h3.84l.36-3.16c.58-.24 1.12-.56 1.63-.96l2.39.96 1.92-3.32-2.02-1.58ZM12.94 15a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" /></svg><span data-i18n="advancedToggle">Advanced settings</span></span><span class="chevron" aria-hidden="true">⌄</span></button>
+        <section id="advanced-settings" class="advanced-settings" hidden aria-label="Advanced settings" data-i18n-aria-label="advancedSettings">
+          <div class="field-group"><label for="popup-locale" data-i18n="interfaceLanguage">Interface language</label><select id="popup-locale"><option value="auto" data-i18n="autoOption">🌐 Auto (Browser language)</option><option value="vi">🇻🇳 Tiếng Việt</option><option value="en">🇺🇸 English</option></select></div>
+          <div class="field-group"><label id="api-key-label" for="api-key">OpenAI API key</label><div class="password-field"><input id="api-key" type="password" autocomplete="off" /><button id="api-key-visibility" class="icon-button input-icon" type="button" aria-label="Show API key"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c5.2 0 8.74 4.55 9.75 6.1a1.65 1.65 0 0 1 0 1.8C20.74 14.45 17.2 19 12 19S3.26 14.45 2.25 12.9a1.65 1.65 0 0 1 0-1.8C3.26 9.55 6.8 5 12 5Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 2.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z" /></svg></button></div></div>
           <div id="openai-fields" class="field-group"><label for="model">Model</label><input id="model" value="gpt-4o-mini" /></div>
-          <div id="libretranslate-fields" class="field-group" hidden><label for="libretranslate-endpoint">URL máy chủ LibreTranslate</label><input id="libretranslate-endpoint" type="url" placeholder="http://localhost:5000" autocomplete="off" /><p class="helper-text">API key là tùy chọn; chỉ nhập nếu máy chủ yêu cầu.</p></div>
+          <div id="libretranslate-fields" class="field-group" hidden><label for="libretranslate-endpoint" data-i18n="libreTranslateEndpoint">LibreTranslate server URL</label><input id="libretranslate-endpoint" type="url" placeholder="http://localhost:5000" autocomplete="off" /><p class="helper-text" data-i18n="libreTranslateHelp">The API key is optional; enter it only if your server requires one.</p></div>
         </section>
 
         <section class="status-section" aria-labelledby="diagnostics-title">
-          <div class="status-bar"><span id="diagnostic-badge" class="status-badge" data-tone="muted"><span class="status-dot"></span><span id="diagnostic-title">Đang chờ</span></span><span id="cache-summary">Cache: 0</span></div>
-          <p id="diagnostic-detail" class="helper-text">Đang tải trạng thái dịch.</p>
-          <details id="diagnostic-details" hidden><summary id="diagnostics-title">Thông tin kỹ thuật</summary><dl id="diagnostic-metrics" class="metrics"></dl><p id="diagnostic-transcript"></p></details>
+          <div class="status-bar"><span id="diagnostic-badge" class="status-badge" data-tone="muted"><span class="status-dot"></span><span id="diagnostic-title" data-i18n="diagnosticTitle">Waiting</span></span><span id="cache-summary" data-i18n="cacheSummary">Cache: 0</span></div>
+          <p id="diagnostic-detail" class="helper-text" data-i18n="diagnosticDetail">Loading translation status.</p>
+          <details id="diagnostic-details" hidden><summary id="diagnostics-title" data-i18n="diagnosticsTitle">Technical details</summary><dl id="diagnostic-metrics" class="metrics"></dl><p id="diagnostic-transcript"></p></details>
         </section>
 
         <p id="action-feedback" class="action-feedback" aria-live="polite" role="status"></p>
-        <div class="actions"><button id="save" class="button button-primary" type="submit">Lưu cài đặt</button><button id="clear-cache" class="button button-text" type="button">Xóa bộ nhớ đệm</button></div>
-        <div id="clear-cache-confirmation" class="inline-confirmation" hidden><p>Xóa toàn bộ bản dịch đã lưu trên thiết bị này?</p><button id="confirm-clear-cache" class="button button-danger" type="button">Xác nhận xóa</button><button id="cancel-clear-cache" class="button button-text" type="button">Hủy</button></div>
+        <div class="actions"><button id="save" class="button button-primary" type="submit" data-i18n="save">Save settings</button><button id="clear-cache" class="button button-text" type="button" data-i18n="clearCache">Clear cache</button></div>
+        <div id="clear-cache-confirmation" class="inline-confirmation" hidden><p data-i18n="clearConfirmation">Clear all saved translations on this device?</p><button id="confirm-clear-cache" class="button button-danger" type="button" data-i18n="confirmClearCache">Confirm clear</button><button id="cancel-clear-cache" class="button button-text" type="button" data-i18n="cancelClearCache">Cancel</button></div>
       </form>
     </main>
     <script type="module" src="/src/popup/main.ts"></script>
