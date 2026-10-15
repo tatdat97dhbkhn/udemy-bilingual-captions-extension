@@ -1,8 +1,9 @@
 import './popup.css';
 import { libreTranslateOriginPattern } from '../background/libretranslate';
 import type { TranslationCache } from '../core/cache';
-import { DEFAULT_SETTINGS, normalizeSettings } from '../shared/settings';
-import type { Diagnostics, Settings, TranslationProvider } from '../shared/types';
+import { DEFAULT_SETTINGS, normalizeSettings, withPopupLocale } from '../shared/settings';
+import type { Diagnostics, PopupLocale, PopupLocalePreference, Settings, TranslationProvider } from '../shared/types';
+import { browserUiLanguage, getPopupCopy, resolvePopupLocale, type PopupFeedbackKey } from '../i18n';
 import { buildDiagnosticsView, buildProviderView } from './view-model';
 
 const enabled = document.querySelector<HTMLInputElement>('#enabled')!;
@@ -11,6 +12,7 @@ const apiKey = document.querySelector<HTMLInputElement>('#api-key')!;
 const apiKeyLabel = document.querySelector<HTMLLabelElement>('#api-key-label')!;
 const model = document.querySelector<HTMLInputElement>('#model')!;
 const provider = document.querySelector<HTMLSelectElement>('#provider')!;
+const popupLocale = document.querySelector<HTMLSelectElement>('#popup-locale')!;
 const libreTranslateEndpoint = document.querySelector<HTMLInputElement>('#libretranslate-endpoint')!;
 const openAIFields = document.querySelector<HTMLElement>('#openai-fields')!;
 const libreTranslateFields = document.querySelector<HTMLElement>('#libretranslate-fields')!;
@@ -33,29 +35,49 @@ const cacheSummary = document.querySelector<HTMLElement>('#cache-summary')!;
 
 let diagnostics: Diagnostics | undefined;
 let cacheCount = 0;
+let currentLocale: PopupLocale = 'en';
+let actionFeedbackKey: PopupFeedbackKey | undefined;
 
-function setActionFeedback(message: string): void { actionFeedback.textContent = message; }
+function setActionFeedback(key?: PopupFeedbackKey): void {
+  actionFeedbackKey = key;
+  actionFeedback.textContent = key ? getPopupCopy(currentLocale).feedback[key] : '';
+}
+
+function applyPopupLocale(locale: PopupLocale): void {
+  currentLocale = locale;
+  const copy = getPopupCopy(locale);
+  document.documentElement.lang = locale;
+  for (const [key, value] of Object.entries(copy.static)) {
+    document.querySelectorAll<HTMLElement>(`[data-i18n="${key}"]`).forEach((element) => { element.textContent = value; });
+  }
+  document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]').forEach((element) => {
+    const key = element.dataset.i18nAriaLabel as keyof typeof copy.static;
+    element.setAttribute('aria-label', copy.static[key]);
+  });
+  apiKeyVisibility.setAttribute('aria-label', copy.apiKeyVisibility(apiKey.type === 'text'));
+  toggleAdvancedSettingsLabel();
+  updateProviderFields();
+  updateEnabledCopy();
+  setActionFeedback(actionFeedbackKey);
+}
 
 function updateEnabledCopy(): void {
-  const isEnabled = enabled.checked;
-  enabledDescription.textContent = isEnabled
-    ? 'Bản dịch tiếng Việt sẽ xuất hiện bên dưới phụ đề gốc.'
-    : 'Bản dịch sẽ không được tạo cho đến khi bạn bật lại và lưu cài đặt.';
+  enabledDescription.textContent = getPopupCopy(currentLocale).enabledDescription(enabled.checked);
   renderDiagnostics();
 }
 
 function updateProviderFields(): void {
-  const view = buildProviderView(provider.value as TranslationProvider);
+  const view = buildProviderView(currentLocale, provider.value as TranslationProvider);
   openAIFields.hidden = !view.showModel;
   libreTranslateFields.hidden = !view.showLibreTranslateEndpoint;
   apiKeyLabel.textContent = view.apiKeyLabel;
 }
 
 function renderDiagnostics(): void {
-  const view = buildDiagnosticsView(enabled.checked, diagnostics, cacheCount);
+  const view = buildDiagnosticsView(currentLocale, enabled.checked, diagnostics, cacheCount);
   diagnosticBadge.dataset.tone = view.tone;
   diagnosticTitle.textContent = view.title;
-  cacheSummary.textContent = `Cache: ${cacheCount}`;
+  cacheSummary.textContent = getPopupCopy(currentLocale).cacheSummary(cacheCount);
   diagnosticDetail.textContent = view.detail;
   diagnosticMetrics.replaceChildren(...view.metrics.map(({ label, value }) => {
     const item = document.createElement('div');
@@ -89,11 +111,15 @@ async function refresh(): Promise<void> {
     apiKey.value = values.apiKey;
     model.value = values.model;
     libreTranslateEndpoint.value = values.libreTranslateEndpoint;
-    updateProviderFields();
-    updateEnabledCopy();
+    popupLocale.value = values.popupLocale;
+    applyPopupLocale(resolvePopupLocale(values.popupLocale, browserUiLanguage()));
   } catch {
-    setActionFeedback('Không thể tải cài đặt. Hãy đóng và mở lại tiện ích.');
+    setActionFeedback('loadError');
   }
+}
+
+function toggleAdvancedSettingsLabel(): void {
+  settingsToggle.setAttribute('aria-label', getPopupCopy(currentLocale).settingsToggle(!advancedSettings.hidden));
 }
 
 function toggleAdvancedSettings(): void {
@@ -101,7 +127,7 @@ function toggleAdvancedSettings(): void {
   advancedSettings.hidden = !open;
   settingsToggle.setAttribute('aria-expanded', String(open));
   advancedToggle.setAttribute('aria-expanded', String(open));
-  settingsToggle.setAttribute('aria-label', open ? 'Đóng cài đặt nâng cao' : 'Mở cài đặt nâng cao');
+  toggleAdvancedSettingsLabel();
   if (open) apiKey.focus();
 }
 
@@ -111,11 +137,18 @@ advancedToggle.addEventListener('click', toggleAdvancedSettings);
 apiKeyVisibility.addEventListener('click', () => {
   const reveal = apiKey.type === 'password';
   apiKey.type = reveal ? 'text' : 'password';
-  apiKeyVisibility.setAttribute('aria-label', reveal ? 'Ẩn API key' : 'Hiện API key');
+  apiKeyVisibility.setAttribute('aria-label', getPopupCopy(currentLocale).apiKeyVisibility(reveal));
 });
 
 enabled.addEventListener('change', updateEnabledCopy);
 provider.addEventListener('change', updateProviderFields);
+popupLocale.addEventListener('change', () => {
+  const preference = popupLocale.value as PopupLocalePreference;
+  applyPopupLocale(resolvePopupLocale(preference, browserUiLanguage()));
+  void chrome.storage.local.get('settings').then(({ settings }) => chrome.storage.local.set({
+    settings: withPopupLocale(settings, preference),
+  })).catch(() => setActionFeedback('saveError'));
+});
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -125,23 +158,24 @@ form.addEventListener('submit', async (event) => {
     apiKey: apiKey.value.trim(),
     model: model.value.trim() || DEFAULT_SETTINGS.model,
     libreTranslateEndpoint: libreTranslateEndpoint.value.trim(),
+    popupLocale: popupLocale.value as PopupLocalePreference,
   };
-  setActionFeedback('');
-  setLoading(saveButton, true, 'Đang lưu…');
+  setActionFeedback();
+  setLoading(saveButton, true, getPopupCopy(currentLocale).loading.save);
   try {
     await chrome.storage.local.set({ settings: values });
     if (values.provider === 'libretranslate') {
       try {
         const granted = await chrome.permissions.request({ origins: [libreTranslateOriginPattern(values.libreTranslateEndpoint)] });
-        setActionFeedback(granted ? 'Đã lưu cài đặt.' : 'Đã lưu, nhưng chưa có quyền truy cập endpoint LibreTranslate nên không thể dịch.');
+        setActionFeedback(granted ? 'saved' : 'permissionDenied');
       } catch {
-        setActionFeedback('Đã lưu, nhưng URL LibreTranslate không hợp lệ.');
+        setActionFeedback('invalidEndpoint');
       }
     } else {
-      setActionFeedback(values.enabled ? 'Đã lưu cài đặt.' : 'Đã lưu: dịch phụ đề đã tắt.');
+      setActionFeedback(values.enabled ? 'saved' : 'savedDisabled');
     }
   } catch {
-    setActionFeedback('Không thể lưu cài đặt. Vui lòng thử lại.');
+    setActionFeedback('saveError');
   } finally {
     setLoading(saveButton, false, '');
   }
@@ -151,16 +185,16 @@ clearCacheButton.addEventListener('click', () => { confirmation.hidden = false; 
 document.querySelector<HTMLButtonElement>('#cancel-clear-cache')!.addEventListener('click', () => { confirmation.hidden = true; });
 document.querySelector<HTMLButtonElement>('#confirm-clear-cache')!.addEventListener('click', async () => {
   const confirmButton = document.querySelector<HTMLButtonElement>('#confirm-clear-cache')!;
-  setActionFeedback('');
-  setLoading(confirmButton, true, 'Đang xóa…');
+  setActionFeedback();
+  setLoading(confirmButton, true, getPopupCopy(currentLocale).loading.clear);
   try {
     await chrome.runtime.sendMessage({ type: 'clearCache' });
     cacheCount = 0;
     renderDiagnostics();
     confirmation.hidden = true;
-    setActionFeedback('Đã xóa bộ nhớ đệm.');
+    setActionFeedback('cleared');
   } catch {
-    setActionFeedback('Không thể xóa bộ nhớ đệm. Vui lòng thử lại.');
+    setActionFeedback('clearError');
   } finally {
     setLoading(confirmButton, false, '');
   }

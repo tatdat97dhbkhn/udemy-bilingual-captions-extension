@@ -3,7 +3,7 @@ import { libreTranslateOriginPattern, parseLibreTranslateTranslation, requestLib
 import { TranslationService } from './translation-service';
 import type { TranslationCache } from '../core/cache';
 
-const settings = { enabled: true, provider: 'openai' as const, apiKey: 'test-key', model: 'gpt-4o-mini', libreTranslateEndpoint: '' };
+const settings = { enabled: true, provider: 'openai' as const, apiKey: 'test-key', model: 'gpt-4o-mini', libreTranslateEndpoint: '', popupLocale: 'en' as const };
 
 describe('OpenAI result validation', () => {
   it('accepts Vietnamese chat-completion content', () => {
